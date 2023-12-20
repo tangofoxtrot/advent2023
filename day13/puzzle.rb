@@ -3,20 +3,29 @@ raw_data = File.read(input_file_name)
 lines = raw_data.split("\n")
 
 require 'pry'
+MAP = {"." => "#", "#" => "."}
 
 class Frame
-  attr_reader :rows, :reflection_dir, :reflection_point
+  attr_reader :rows, :reflection_dir, :reflection_point, :reflection_set
 
   def initialize
     @rows = []
     @reflection_dir = nil
+    @reflection_set = nil
   end
 
-  def find_reflection_point
-    return if reflection_dir
-
+  def find_vertical_reflection(mutate:)
     vert_match = vertical_reflection_indices.detect do |col_index_set|
-      col_index_set.all? do |col_set_index|
+      pre_condition = if mutate
+                       if reflection_dir == "vertical"
+                         col_index_set != reflection_set
+                       else
+                         true
+                       end
+                     else
+                       true
+                     end
+      pre_condition && col_index_set.all? do |col_set_index|
         columns[col_set_index[0]] == columns[col_set_index[1]]
       end
     end
@@ -24,11 +33,25 @@ class Frame
     if vert_match
       @reflection_dir = "vertical"
       @reflection_point = vert_match.last.first + 1
-      return
+      @reflection_set = vert_match
+      if mutate
+        throw :match_found
+      end
     end
+  end
 
+  def find_horizonal_reflection(mutate:)
     horz_match = horizontal_reflection_indices.detect do |row_index_set|
-      row_index_set.all? do |row_set_index|
+      pre_condition = if mutate
+                       if reflection_dir == "horizontal"
+                         row_index_set != reflection_set
+                       else
+                         true
+                       end
+                     else
+                       true
+                     end
+      pre_condition && row_index_set.all? do |row_set_index|
         rows[row_set_index[0]] == rows[row_set_index[1]]
       end
     end
@@ -36,10 +59,31 @@ class Frame
     if horz_match
       @reflection_dir = "horizontal"
       @reflection_point = horz_match.last.first + 1
+      @reflection_set = horz_match
+      if mutate
+        throw :match_found
+      end
       return
     end
+  end
 
-    binding.pry
+  def find_reflection_point(mutate: false)
+    find_vertical_reflection(mutate:)
+    find_horizonal_reflection(mutate:)
+  end
+
+  def mutate_and_find
+    catch(:match_found) do
+      rows.each do |row|
+        row.each do |char|
+          orig_set = reflection_set
+          orig_dir = reflection_dir
+          char.replace(MAP[char])
+          find_reflection_point(mutate: true)
+          char.replace(MAP[char])
+        end
+      end
+    end
   end
 
   def to_s
@@ -54,7 +98,6 @@ class Frame
       reflection_point * 100
     end
   end
-
 
   def columns
     @columns ||= 0.upto(max_width - 1).map {|n| rows.map {|x| x[n] } }
@@ -111,8 +154,6 @@ end
 
 
 frames.each(&:find_reflection_point)
-#puts frames.first.vertical_reflection_indices.first.inspect
-#puts frames.map(&:reflection_dir)
-#puts frames.map(&:reflection_point).map(&:inspect)
-#puts frames.map(&:value)
 puts "Puzzle1 #{frames.map(&:value).sum}"
+frames.each(&:mutate_and_find)
+puts "Puzzle2 #{frames.map(&:value).sum}"

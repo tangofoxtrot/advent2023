@@ -17,7 +17,6 @@ lines.each_with_index do |line, line_index|
   unknowns = chars.each_with_index.filter_map {|char, index| index if char == UNKNOWN }
   unknown_count = unknowns.count
   bin_numbers =  (0..2**unknown_count-1).map { |i| "%0#{unknown_count}b" % i }
-  matches = []
 
   bin_numbers.each do |combo|
     new_chars = combo.gsub(/[01]/, '0' => OPERATIONAL, "1" => DAMAGED).chars
@@ -26,9 +25,8 @@ lines.each_with_index do |line, line_index|
     end
     damaged_groups = chars.chunk {|x| x }.select {|char, group| char == DAMAGED }.map {|char, group| group.count }
     if damaged_counts == damaged_groups
-      matches << chars.join
+      counts += 1
     end
   end
-  counts += matches.uniq.count
 end
 puts "Puzzle1 #{counts}"

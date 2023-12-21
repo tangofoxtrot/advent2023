@@ -9,30 +9,47 @@ class Dish
   CUBE_ROCK = "#"
   EMPTY = "."
 
-  attr_reader :rows, :tilted_rows, :tilted_columns
+  DIRECTIONS = %w{N W S E}
+
+  attr_reader :rows
 
   def initialize
     @rows = []
-    @tilted_rows = []
   end
 
-  def tilt
-    @tilted_rows = []
-    new_columns = columns.map do |column|
-      tilt_column(column)
+  def tilt(direction="N")
+    collection = case direction
+    when "N"
+      @columns = tilt_collection(columns)
+      @rows = recompute_rows(columns)
+    when "W"
+      @rows = tilt_collection(rows)
+      @columns = recompute_columns(rows)
+    when "S"
+      @columns = tilt_collection(columns.reverse).reverse
+      @rows = recompute_rows(columns)
+    when "E" then rows.reverse
+      @rows = tilt_collection(rows.reverse).reverse
+      @columns = recompute_columns(rows)
     end
-    @tilted_columns = new_columns
-    @tilted_rows = 0.upto(new_columns.length - 1).map {|n| new_columns.map {|x| x[n] } }
   end
 
   def columns
-    @columns ||= 0.upto(rows.first.length - 1).map {|n| rows.map {|x| x[n] } }
+    @columns ||= recompute_columns(rows)
+  end
+
+  def recompute_columns(rs)
+    0.upto(rs.first.length - 1).map {|n| rs.map {|x| x[n] } }
+  end
+
+  def recompute_rows(cols)
+    0.upto(cols.length - 1).map {|n| cols.map {|x| x[n] } }
   end
 
   def compute_load
-    max_value = tilted_columns.first.length
+    max_value = columns.first.length
     value = 0
-    tilted_columns.each do |col|
+    columns.each do |col|
       col.each_with_index do |char, index|
         case char
         when ROUND_ROCK
@@ -43,37 +60,53 @@ class Dish
     value
   end
 
-  def tilt_column(column)
-    new_col = []
-    column.each_with_index do |char, index|
-      case char
-      when ROUND_ROCK
-        roll_rock(new_col)
-      else
-        new_col << char
+  def tilt_collection(collection)
+    collection.map do |x|
+      new_collection = []
+      x.each do |char|
+        case char
+        when ROUND_ROCK
+          roll_rock(new_collection)
+        else
+          new_collection << char
+        end
       end
+      new_collection
     end
-    new_col
   end
 
-  def roll_rock(new_col)
-    new_index = new_col.length
+  def tilt_row(row)
+    new_row = []
+    row.each do |char|
+      case char
+      when ROUND_ROCK
+        roll_rock_row(new_row)
+      else
+        new_row << char
+      end
+    end
+    new_row
+
+  end
+
+  def roll_rock(collection)
+    new_index = collection.length
     original_length = new_index
     if new_index == 0
-      new_col[new_index] = ROUND_ROCK
+      collection[new_index] = ROUND_ROCK
       return
     end
-    (new_col.length - 1).downto(0).each do |possible_index|
-      case  new_col[possible_index]
+    (collection.length - 1).downto(0).each do |possible_index|
+      case  collection[possible_index]
       when ROUND_ROCK, CUBE_ROCK
         break
       when EMPTY
         new_index = possible_index
       end
     end
-    new_col[new_index] = ROUND_ROCK
+    collection[new_index] = ROUND_ROCK
     if new_index != original_length
-      new_col[original_length] = EMPTY
+      collection[original_length] = EMPTY
     end
   end
 end
@@ -85,7 +118,24 @@ end
 
 dish.tilt
 
-dish.tilted_rows.each do |row|
+dish.rows.each do |row|
   puts row.join
 end
+
 puts "Puzzle1 #{dish.compute_load}"
+
+
+dish = Dish.new
+lines.each do |line|
+  dish.rows << line.chars
+end
+
+1_000_000_000.times do |n|
+  puts n
+  Dish::DIRECTIONS.each do |dir|
+    dish.tilt(dir)
+  end
+end
+
+puts "Puzzle1 #{dish.compute_load}"
+

@@ -26,10 +26,10 @@ class Dish
       @rows = tilt_collection(rows)
       @columns = recompute_columns(rows)
     when "S"
-      @columns = tilt_collection(columns.reverse).reverse
+      @columns = tilt_collection(columns.map(&:reverse)).map(&:reverse)
       @rows = recompute_rows(columns)
     when "E" then rows.reverse
-      @rows = tilt_collection(rows.reverse).reverse
+      @rows = tilt_collection(rows.reverse.map(&:reverse)).reverse.map(&:reverse)
       @columns = recompute_columns(rows)
     end
   end
@@ -38,12 +38,20 @@ class Dish
     @columns ||= recompute_columns(rows)
   end
 
+  def reset_columns!
+    @column = nil
+  end
+
   def recompute_columns(rs)
     0.upto(rs.first.length - 1).map {|n| rs.map {|x| x[n] } }
   end
 
   def recompute_rows(cols)
     0.upto(cols.length - 1).map {|n| cols.map {|x| x[n] } }
+  end
+
+  def to_s
+    rows.map(&:join).join("\n")
   end
 
   def compute_load
@@ -75,20 +83,6 @@ class Dish
     end
   end
 
-  def tilt_row(row)
-    new_row = []
-    row.each do |char|
-      case char
-      when ROUND_ROCK
-        roll_rock_row(new_row)
-      else
-        new_row << char
-      end
-    end
-    new_row
-
-  end
-
   def roll_rock(collection)
     new_index = collection.length
     original_length = new_index
@@ -118,24 +112,34 @@ end
 
 dish.tilt
 
-dish.rows.each do |row|
-  puts row.join
-end
-
 puts "Puzzle1 #{dish.compute_load}"
-
 
 dish = Dish.new
 lines.each do |line|
   dish.rows << line.chars
 end
 
-1_000_000_000.times do |n|
-  puts n
+cycle_count = 1_000_000_000
+cycle_start = 0
+maps = [dish.rows]
+cycle_count.times do |n|
   Dish::DIRECTIONS.each do |dir|
     dish.tilt(dir)
   end
+  idx = maps.index(dish.rows)
+  if !idx.nil?
+    cycle_start = idx
+    break
+  end
+  maps << dish.rows
 end
 
-puts "Puzzle1 #{dish.compute_load}"
+thing = maps[cycle_start + ((cycle_count - cycle_start) % (maps.size - cycle_start))]
 
+new_dish = Dish.new
+thing.each do |line|
+  new_dish.rows << line
+end
+
+
+puts "Puzzle2 #{new_dish.compute_load}"

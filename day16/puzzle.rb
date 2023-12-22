@@ -161,23 +161,41 @@ tile_map = {
   end,
 }
 
-history = []
 6000.times do |n|
-  puts n
-  last_char = nil
   cursors.reject(&:off_map?).each do |cursor|
     energized << cursor.position
     char = board[cursor.y][cursor.x]
-    last_char = char
     tile = tile_map[char]
     tile.call(cursor).each(&:move)
   end
-  #new_board = print_board(board, cursors)
-  #history << new_board
+  break if cursors.all?(&:off_map?)
 end
 
 #puts print_energized_board(board, cursors)
 #history.each {|x| system("clear");puts(x);sleep(0.1) }; nil
 #binding.pry
 #puts cursors.map {|x| x.energized }.flatten(1).uniq.count
-puts energized.length
+
+dirs = {
+  "E" => 0.upto(MAX_HEIGHT - 1).map {|n| {x: 0, y: n} },
+  "W" => 0.upto(MAX_HEIGHT - 1).map {|n| {x: MAX_WIDTH - 1, y: n} },
+  "N" => 0.upto(MAX_WIDTH - 1).map {|n| {x: n, y: MAX_HEIGHT - 1} },
+  "S" => 0.upto(MAX_WIDTH - 1).map {|n| {x: n, y: 0} },
+}
+values = dirs.map do |dir, positions|
+  positions.map do |position|
+    energized = Set.new
+    cursors = [Cursor.new(x: position[:x], y: position[:y], direction: dir)]
+    6000.times do |n|
+      cursors.reject(&:off_map?).each do |cursor|
+        energized << cursor.position
+        char = board[cursor.y][cursor.x]
+        tile = tile_map[char]
+        tile.call(cursor).each(&:move)
+      end
+      break if cursors.all?(&:off_map?)
+    end
+    energized.length
+  end
+end.flatten
+binding.pry
